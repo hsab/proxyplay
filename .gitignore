@@ -1,7 +1,10 @@
 # ignore all
 # check another .ignore file in addons folder
 
-/bin
+!/bin
+/bin/*
+!/bin/data/
+!/bin/data/*
 /obj
 /.vscode/browse.db
 /.vscode/browse.db*

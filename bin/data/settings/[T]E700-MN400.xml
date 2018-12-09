@@ -1,0 +1,33 @@
+<monkParams>
+    <monkX>0</monkX>
+    <monkY>0</monkY>
+    <monkW>400</monkW>
+    <monkLO>0</monkLO>
+    <monkRO>0</monkRO>
+    <monkTO>150</monkTO>
+    <monkBO>0</monkBO>
+</monkParams>
+<nikesParams>
+    <nikesX>1100</nikesX>
+    <nikesY>0</nikesY>
+    <nikesW>400</nikesW>
+    <nikesLO>160</nikesLO>
+    <nikesRO>0</nikesRO>
+    <nikesTO>150</nikesTO>
+    <nikesBO>0</nikesBO>
+</nikesParams>
+<exploParams>
+    <exploX>400</exploX>
+    <exploY>0</exploY>
+    <exploW>700</exploW>
+    <exploLO>80</exploLO>
+    <exploRO>0</exploRO>
+    <exploTO>0</exploTO>
+    <exploBO>0</exploBO>
+</exploParams>
+<offsetParams>
+    <minX>0</minX>
+    <maxX>1660</maxX>
+    <minY>0</minY>
+    <maxY>700</maxY>
+</offsetParams>
