@@ -24,6 +24,12 @@
     <exploRO>0</exploRO>
     <exploTO>80</exploTO>
     <exploBO>0</exploBO>
+    <horizOffset>10</horizOffset>
+    <vertOffset>10</vertOffset>
+    <topTextOffset>1</topTextOffset>
+    <bottomTextOffset>7.7</bottomTextOffset>
+    <midTextOffset>-2.093</midTextOffset>
+    <speedLimit>10</speedLimit>
 </exploParams>
 <offsetParams>
     <minX>0</minX>

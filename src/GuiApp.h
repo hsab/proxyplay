@@ -38,6 +38,12 @@ class GuiApp : public ofBaseApp {
    ofParameter<int> exploRO;
    ofParameter<int> exploTO;
    ofParameter<int> exploBO;
+   ofParameter<int> horizOffset;
+   ofParameter<int> vertOffset;
+   ofParameter<float> topTextOffset;
+   ofParameter<float> bottomTextOffset;
+   ofParameter<float> midTextOffset;
+   ofParameter<int> speedLimit;
    ofParameterGroup exploParams;
 
    ofParameter<int> minX;
@@ -49,7 +55,7 @@ class GuiApp : public ofBaseApp {
    ofxXmlSettings settings;
    ofDirectory dir;
    vector<string> styles;
-   int styleIndex = 0;
+   int styleIndex = -1;
 
    void setup() {
       ofSetEscapeQuitsApp(false);
@@ -111,6 +117,12 @@ class GuiApp : public ofBaseApp {
       exploParams.add(exploRO.set("exploRO", 0, -540, 540));
       exploParams.add(exploTO.set("exploTO", 0, -540, 540));
       exploParams.add(exploBO.set("exploBO", 0, -540, 540));
+      exploParams.add(horizOffset.set("horizOffset", 0, -50, 50));
+      exploParams.add(vertOffset.set("vertOffset", 0, -50, 50));
+      exploParams.add(topTextOffset.set("topTextOffset", 0, -50, 50));
+      exploParams.add(bottomTextOffset.set("bottomTextOffset", 0, -50, 50));
+      exploParams.add(midTextOffset.set("midTextOffset", 0, -50, 50));
+      exploParams.add(speedLimit.set("speedLimit", 10, 1, 20));
 
       offsetParams.clear();
       offsetParams.setName("offsetParams");
@@ -139,8 +151,14 @@ class GuiApp : public ofBaseApp {
             ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
             ImGui::Text("\n");
 
-            ImGui::Columns(3, "buttons", false);
-            if (ImGui::Button("SAVE", ImVec2(ImGui::GetColumnWidth(), 24.0f)))
+            ImGui::Columns(4, "buttons", false);
+            if (ImGui::Button("SAVE", ImVec2(ImGui::GetColumnWidth(), 24.0f))) {
+               if (styleIndex >= 0)
+                  saveSettings(styles[styleIndex]);
+            }
+
+            ImGui::NextColumn();
+            if (ImGui::Button("SAVE AS", ImVec2(ImGui::GetColumnWidth(), 24.0f)))
                saveSettings();
 
             ImGui::NextColumn();
@@ -154,8 +172,10 @@ class GuiApp : public ofBaseApp {
             ImGui::Text("\n");
 
             ImGui::NextColumn();
-            if (ImGui::Button("DEFAULT", ImVec2(ImGui::GetColumnWidth(), 24.0f)))
+            if (ImGui::Button("DEFAULT", ImVec2(ImGui::GetColumnWidth(), 24.0f))) {
                loadSettings("init.xml");
+               styleIndex = -1;
+            }
 
             for (int i = 0; i < styles.size(); i++) {
                ImGui::NextColumn();
@@ -182,20 +202,23 @@ class GuiApp : public ofBaseApp {
       return guiSettings.mouseOverGui;
    }
 
-   void saveSettings() {
+   void saveSettings(string path = "") {
       settings.clear();
       ofSerialize(settings, monkParams);
       ofSerialize(settings, nikesParams);
       ofSerialize(settings, exploParams);
       ofSerialize(settings, offsetParams);
 
-      ofFileDialogResult saveFileResult = ofSystemSaveDialog(ofGetTimestampString() + ".xml", "Save Settings");
-      if (saveFileResult.bSuccess) {
-         settings.saveFile(saveFileResult.filePath);
-         loadStyles();
+      if (path == "") {
+         ofFileDialogResult saveFileResult = ofSystemSaveDialog(ofGetTimestampString() + ".xml", "Save Settings");
+         if (saveFileResult.bSuccess) {
+            settings.saveFile(saveFileResult.filePath);
+            loadStyles();
+         }
+      } else {
+         settings.saveFile(path);
       }
    }
-
    void loadSettings(string path = "") {
       string filePath = path;
       bool success = true;

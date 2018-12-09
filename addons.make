@@ -3,3 +3,6 @@ ofxImGui
 ofxJSON
 ofxPreset
 ofxXmlSettings
+ofxTitles
+ofxPoco
+ofxTextSuite
