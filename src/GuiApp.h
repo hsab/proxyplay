@@ -179,14 +179,14 @@ class GuiApp : public ofBaseApp {
 
       kinectParams.clear();
       kinectParams.setName("kinectParams");
-      kinectParams.add(minArea.set("minArea", 0, 1, 5000));
+      kinectParams.add(minArea.set("minArea", 50, 1, 5000));
       kinectParams.add(maxArea.set("maxArea", 5000, 1, 5000));
       kinectParams.add(threshold.set("thresholdArea", 0, 0, 255));
       kinectParams.add(nearThreshold.set("nearThreshold", 255, 0, 255));
-      kinectParams.add(farThreshold.set("farThreshold", 220, 0, 255));
+      kinectParams.add(farThreshold.set("farThreshold", 160, 0, 255));
       kinectParams.add(triggerThreshold.set("triggerThreshold", 5, 0, 255));
-      kinectParams.add(leftLimit.set("leftLimit", 0, 0, 1920));
-      kinectParams.add(rightLimit.set("rightLimit", 0, 0, 1920));
+      kinectParams.add(leftLimit.set("leftLimit", 80, 0, 1920));
+      kinectParams.add(rightLimit.set("rightLimit", 160, 0, 1920));
       kinectParams.add(angle.set("angle", 0, -30, 30));
    }
 
