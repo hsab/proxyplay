@@ -2,6 +2,8 @@
 
 //--------------------------------------------------------------
 void ofApp::setup() {
+   ofSetEscapeQuitsApp(false);
+
    ofBackground(255);
    ofSetCircleResolution(200);
 
@@ -12,9 +14,13 @@ void ofApp::setup() {
    nikes.setLoopState(OF_LOOP_NORMAL);
    nikes.play();
 
-   monk.load("vids/Nikes.mp4");
+   monk.load("vids/Monk.mp4");
    monk.setLoopState(OF_LOOP_NORMAL);
    monk.play();
+
+   explo.load("vids/Explo.mov");
+   explo.setLoopState(OF_LOOP_NORMAL);
+   explo.play();
 
    ofBackground(0);
 }
@@ -26,6 +32,7 @@ void ofApp::update() {
 
    nikes.update();
    monk.update();
+   explo.update();
 }
 
 //--------------------------------------------------------------
@@ -33,7 +40,16 @@ void ofApp::draw() {
    // ofSetColor(gui->color);
    // ofDrawCircle(ofGetWidth() * 0.5, ofGetWidth() * 0.5, gui->radius);
 
-   drawVid(nikes, DD_NIKES);
+   ofPushMatrix();
+   int canvasW = gui->offsetParams.getInt("maxX") - gui->offsetParams.getInt("minX");
+   int canvasY = gui->offsetParams.getInt("maxY") - gui->offsetParams.getInt("minY");
+   ofTranslate((ofGetWidth() - canvasW) / 2, (ofGetHeight() - canvasY) / 2);
+   {
+      drawVid(monk, DD_MONK);
+      drawVid(nikes, DD_NIKES);
+      drawVid(explo, DD_EXPLO);
+   }
+   ofPopMatrix();
 }
 
 void ofApp::drawVid(ofVideoPlayer& vid, ddVideos flag) {
@@ -58,6 +74,7 @@ void ofApp::drawVid(ofVideoPlayer& vid, ddVideos flag) {
    int x = params.getInt(prefix + "X") + params.getInt(prefix + "LO") + params.getInt(prefix + "RO");
    int y = params.getInt(prefix + "Y") + params.getInt(prefix + "TO") + params.getInt(prefix + "BO");
    int w = params.getInt(prefix + "W");
+   ofSetHexColor(0xffffff);
    vid.draw(x, y, w, w);
 }
 
@@ -65,6 +82,8 @@ void ofApp::drawVid(ofVideoPlayer& vid, ddVideos flag) {
 void ofApp::keyPressed(int key) {
    if (key == 'f')
       ofToggleFullscreen();
+   if (key == 's')
+      gui->nextStyle();
 }
 
 //--------------------------------------------------------------
@@ -73,6 +92,11 @@ void ofApp::keyReleased(int key) {
 
 //--------------------------------------------------------------
 void ofApp::mouseMoved(int x, int y) {
+   int width = ofGetWidth();
+   float pct = (float)x / (float)width;
+   float speed = (2 * pct - 1) * 10.0f;
+   explo.setSpeed(speed);
+   cout << speed << endl;
 }
 
 //--------------------------------------------------------------

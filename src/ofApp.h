@@ -32,7 +32,7 @@ class ofApp : public ofBaseApp {
    shared_ptr<GuiApp> gui;
    ofVideoPlayer monk;
    ofVideoPlayer nikes;
-   ofVideoPlayer explosions;
+   ofVideoPlayer explo;
 
    int centerX;
    int centerY;
