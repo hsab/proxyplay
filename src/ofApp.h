@@ -34,6 +34,11 @@ class ofApp : public ofBaseApp {
    ofVideoPlayer nikes;
    ofVideoPlayer explo;
 
+   int exploFrames = 4306;
+   int exploDuration = 179.41667175292969;
+
+   vector<int> exploShots{397, 1275, 1658, 2153, 3031, 3414, 3909};
+
    int centerX;
    int centerY;
 };
