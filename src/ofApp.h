@@ -17,6 +17,7 @@ class ofApp : public ofBaseApp {
    ofVideoPlayer monk;
    ofVideoPlayer nikes;
    ofVideoPlayer explo;
+   ofSoundPlayer sunless;
 
    int exploFrames = 4306;
    int exploDuration = 179.41667175292969;
@@ -59,6 +60,13 @@ class ofApp : public ofBaseApp {
       explo.setLoopState(OF_LOOP_NORMAL);
       explo.play();
 
+      // ofLogNotice() << "Loading sound.";
+      // sunless.load("vids/sunless.wav");
+      // ofLogNotice() << "Sound loaded";
+      // sunless.setLoop(true);
+      // sunless.play();
+      // sunless.setSpeed(0.3f);
+
       infoFont.load("verdana.ttf", 12, true, true);
       infoFont.setLineHeight(18.0f);
       infoFont.setLetterSpacing(1.037);
@@ -67,7 +75,7 @@ class ofApp : public ofBaseApp {
       parser = subParserFactory->getParser();
       sub = parser->getSubtitles();
 
-      mTitles.bindTime(2820);
+      mTitles.bindTime(1230);
       mTitles.loadFont("Tahoma.ttf", 20);
       setupSubtitle();
       mTitles.setLoopState(OF_LOOP_NORMAL);
@@ -95,6 +103,13 @@ class ofApp : public ofBaseApp {
    void update() {
       centerX = ofGetWidth() / 2;
       centerY = ofGetHeight() / 2;
+
+      if (gui->updateInApp) {
+         float pct = gui->limitedViewWidth - gui->limitedViewerPosition;
+         pct = pct / gui->limitedViewWidth;
+         exploSpeed = (2 * pct - 1) * gui->exploParams.getInt("speedLimit");
+         explo.setSpeed(exploSpeed);
+      }
 
       nikes.update();
       monk.update();
@@ -207,10 +222,10 @@ class ofApp : public ofBaseApp {
 
    //--------------------------------------------------------------
    void mouseMoved(int x, int y) {
-      int width = ofGetWidth();
-      float pct = (float)x / (float)width;
-      exploSpeed = (2 * pct - 1) * gui->exploParams.getInt("speedLimit");
-      explo.setSpeed(exploSpeed);
+      // int width = ofGetWidth();
+      // float pct = (float)x / (float)width;
+      // exploSpeed = (2 * pct - 1) * gui->exploParams.getInt("speedLimit");
+      // explo.setSpeed(exploSpeed);
    }
 
    //--------------------------------------------------------------

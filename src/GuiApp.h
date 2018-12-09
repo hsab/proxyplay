@@ -73,9 +73,13 @@ class GuiApp : public ofBaseApp {
    ofParameter<float> nearThreshold, farThreshold;
    ofParameter<float> triggerThreshold;
    ofParameterGroup kinectParams;
+   float viewerPosition = -1.0f;
+   float newViewerPosition;
+   float limitedViewerPosition;
+   float limitedViewWidth;
+   bool updateInApp = false;
 
    void setup() {
-      ofSetLogLevel(OF_LOG_VERBOSE);
       ofSetEscapeQuitsApp(false);
 
       gui.setup();
@@ -188,6 +192,40 @@ class GuiApp : public ofBaseApp {
 
    void update() {
       kinect.update();
+      updateInApp = true;
+      if (newViewerPosition >= leftLimit && newViewerPosition <= kinect.width - rightLimit) {
+         if (viewerPosition < 0) {
+            viewerPosition = newViewerPosition;
+            limitedViewerPosition = viewerPosition;
+            limitedViewerPosition = ofMap(limitedViewerPosition, 0, kinect.width, 0, kinect.width - rightLimit - leftLimit);
+            cout << limitedViewerPosition << endl;
+         }
+         if (abs(newViewerPosition - viewerPosition) > triggerThreshold) {
+            viewerPosition = newViewerPosition;
+            limitedViewerPosition = viewerPosition;
+            cout << "viewerPosition: " << viewerPosition << endl;
+            cout << " data: " << kinect.width << " | " << leftLimit << " | " << rightLimit << endl;
+            limitedViewerPosition -= leftLimit;
+            limitedViewWidth = kinect.width - rightLimit - leftLimit;
+            cout << "new: " << limitedViewerPosition << " | " << limitedViewWidth << endl
+                 << endl;
+
+            updateInApp = true;
+            // limitedViewerPosition = ofMap(limitedViewerPosition, 0, kinect.width, 0, kinect.width - rightLimit - leftLimit);
+            // cout << "IN UPDT limitedViewerPosition: " << limitedViewerPosition << endl;
+            // cout << "IN UPDT upper limit: " << kinect.width - rightLimit - leftLimit << endl;
+         }
+      } else {
+         limitedViewWidth = kinect.width - rightLimit - leftLimit;
+         if (newViewerPosition <= leftLimit) {
+            limitedViewerPosition = 0;
+         }
+
+         if (newViewerPosition >= rightLimit) {
+            limitedViewerPosition = limitedViewWidth;
+         }
+      }
+
       if (kinect.isFrameNew()) {
          grayImage.setFromPixels(kinect.getDepthPixels());
          grayImage.update();
@@ -217,11 +255,16 @@ class GuiApp : public ofBaseApp {
 
    void draw() {
       mouseOverGui = imGui();
-      ofSetHexColor(0xffffff);
       int leftMargin = 400;
+      ofSetHexColor(0xffffff);
       kinect.drawDepth(leftMargin, gOffset, kinect.width, kinect.height);
+      ofSetHexColor(0xff0000);
+
+      ofDrawLine(leftMargin + leftLimit, gOffset, leftMargin + leftLimit, kinect.height + gOffset);
+      ofDrawLine(leftMargin + kinect.width - rightLimit, gOffset, leftMargin + kinect.width - rightLimit, kinect.height + gOffset);
+
       grayImage.draw(leftMargin, kinect.height + gOffset * 2, kinect.width, kinect.height);
-      ofSetColor(0, 255, 0);
+
       ofPushMatrix();
       {
          ofTranslate(leftMargin, kinect.height + gOffset, 0);  // center the points a bit
@@ -241,13 +284,17 @@ class GuiApp : public ofBaseApp {
                   ch = rc.height;  // ch = (rc.height < ch) ? rc.height : ch;
                }
             }
+            newViewerPosition = cx + cw / 2;
          }
          ofNoFill();
          ofRect(cx, cy, cw, ch);
+         ofFill();
+         ofDrawCircle(cx + cw / 2, cy + ch / 2, 10);
          // contourFinder.draw();
       }
       ofPopMatrix();
 
+      ofLoadIdentityMatrix();
       ofSetHexColor(0xff0000);
       ofDrawLine(leftMargin + leftLimit, kinect.height + gOffset * 2, leftMargin + leftLimit, (kinect.height + gOffset) * 2);
       ofDrawLine(leftMargin + kinect.width - rightLimit, kinect.height + gOffset * 2, leftMargin + kinect.width - rightLimit, (kinect.height + gOffset) * 2);
