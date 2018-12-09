@@ -1,8 +1,10 @@
 #pragma once
 
 #include "ofMain.h"
+#include "ofxCv.h"
 #include "ofxGui.h"
 #include "ofxImGui.h"
+#include "ofxKinect.h"
 #include "ofxPreset.h"
 #include "ofxXmlSettings.h"
 
@@ -57,11 +59,28 @@ class GuiApp : public ofBaseApp {
    vector<string> styles;
    int styleIndex = -1;
 
+   ofxKinect kinect;
+   ofImage colorImg;
+   ofImage grayImage;       // grayscale depth image
+   ofImage grayThreshNear;  // the near thresholded image
+   ofImage grayThreshFar;   // the far thresholded image
+   ofImage grayPreprocImage;
+   ofxCv::ContourFinder contourFinder;
+
+   ofParameter<int> angle;
+   ofParameter<float> minArea, maxArea, threshold;
+   ofParameter<float> leftLimit, rightLimit;
+   ofParameter<float> nearThreshold, farThreshold;
+   ofParameter<float> triggerThreshold;
+   ofParameterGroup kinectParams;
+
    void setup() {
+      ofSetLogLevel(OF_LOG_VERBOSE);
       ofSetEscapeQuitsApp(false);
 
       gui.setup();
       setupParams();
+      setupKinect();
 
       loadStyles();
 
@@ -72,7 +91,7 @@ class GuiApp : public ofBaseApp {
          ofDeserialize(settings, offsetParams);
       }
 
-      ofBackground(0);
+      // ofBackground(0);
       ofSetVerticalSync(false);
    }
 
@@ -85,6 +104,29 @@ class GuiApp : public ofBaseApp {
             styles.push_back(filePath);
          }
       }
+   }
+
+   void setupKinect() {
+      kinect.setRegistration(true);
+
+      kinect.init(false, false);  // disable video image (faster fps)
+      kinect.open();              // open a kinect using it's unique serial #
+
+      // print the intrinsic IR sensor values
+      if (kinect.isConnected()) {
+         ofLogNotice() << "sensor-emitter dist: " << kinect.getSensorEmitterDistance() << "cm";
+         ofLogNotice() << "sensor-camera dist:  " << kinect.getSensorCameraDistance() << "cm";
+         ofLogNotice() << "zero plane pixel size: " << kinect.getZeroPlanePixelSize() << "mm";
+         ofLogNotice() << "zero plane dist: " << kinect.getZeroPlaneDistance() << "mm";
+      }
+
+      kinect.setCameraTiltAngle(angle);
+
+      colorImg.allocate(kinect.width, kinect.height, OF_IMAGE_COLOR);
+      grayImage.allocate(kinect.width, kinect.height, OF_IMAGE_GRAYSCALE);
+      grayThreshNear.allocate(kinect.width, kinect.height, OF_IMAGE_GRAYSCALE);
+      grayThreshFar.allocate(kinect.width, kinect.height, OF_IMAGE_GRAYSCALE);
+      grayPreprocImage.allocate(kinect.width, kinect.height, OF_IMAGE_GRAYSCALE);
    }
 
    void setupParams() {
@@ -130,19 +172,93 @@ class GuiApp : public ofBaseApp {
       offsetParams.add(maxX.set("maxX", 1920, -1920, 1920));
       offsetParams.add(minY.set("minY", 0, -1920, 1920));
       offsetParams.add(maxY.set("maxY", 1080, -1920, 1920));
+
+      kinectParams.clear();
+      kinectParams.setName("kinectParams");
+      kinectParams.add(minArea.set("minArea", 0, 1, 5000));
+      kinectParams.add(maxArea.set("maxArea", 5000, 1, 5000));
+      kinectParams.add(threshold.set("thresholdArea", 0, 0, 255));
+      kinectParams.add(nearThreshold.set("nearThreshold", 255, 0, 255));
+      kinectParams.add(farThreshold.set("farThreshold", 220, 0, 255));
+      kinectParams.add(triggerThreshold.set("triggerThreshold", 5, 0, 255));
+      kinectParams.add(leftLimit.set("leftLimit", 0, 0, 1920));
+      kinectParams.add(rightLimit.set("rightLimit", 0, 0, 1920));
+      kinectParams.add(angle.set("angle", 0, -30, 30));
    }
 
    void update() {
+      kinect.update();
+      if (kinect.isFrameNew()) {
+         grayImage.setFromPixels(kinect.getDepthPixels());
+         grayImage.update();
+         ofxCv::threshold(grayImage, grayThreshNear, nearThreshold, true);
+         ofxCv::threshold(grayImage, grayThreshFar, farThreshold);
+         cv::Mat grayThreshNearMat = ofxCv::toCv(grayThreshNear);
+         cv::Mat grayThreshFarMat = ofxCv::toCv(grayThreshFar);
+         cv::Mat grayImageMat = ofxCv::toCv(grayImage);
+         ofxCv::bitwise_and(grayThreshNearMat, grayThreshFarMat, grayImageMat);
+         grayPreprocImage = grayImage;
+
+         ofxCv::dilate(grayImage);
+         ofxCv::dilate(grayImage);
+         //erode(grayImage);
+
+         // Mark image as changed
+         grayImage.update();
+
+         // Find contours
+         contourFinder.setMinAreaRadius(minArea);
+         contourFinder.setMaxAreaRadius(maxArea);
+         contourFinder.setThreshold(threshold);
+         contourFinder.findContours(grayImage);
+         contourFinder.setFindHoles(false);
+      }
    }
 
    void draw() {
       mouseOverGui = imGui();
+      ofSetHexColor(0xffffff);
+      int leftMargin = 400;
+      kinect.drawDepth(leftMargin, gOffset, kinect.width, kinect.height);
+      grayImage.draw(leftMargin, kinect.height + gOffset * 2, kinect.width, kinect.height);
+      ofSetColor(0, 255, 0);
+      ofPushMatrix();
+      {
+         ofTranslate(leftMargin, kinect.height + gOffset, 0);  // center the points a bit
+                                                               // ofScale(0.625, 0.625, 1);  // 640x480 -> 400x300 = 0.625
+         ofSetHexColor(0x00ff00);
+         cv::Rect rc;
+         int area = 0;
+         int cx, cy, cw, ch;
+         if (contourFinder.size() > 0) {
+            for (int i = 0; i < contourFinder.size(); i++) {
+               rc = contourFinder.getBoundingRect(i);
+               if (rc.area() > area) {
+                  area = rc.area();
+                  cx = rc.x;       // cx = (rc.x > cx) ? rc.x : cx;
+                  cy = rc.y;       // cy = (rc.y > cy) ? rc.y : cy;
+                  cw = rc.width;   // cw = (rc.width < cw) ? rc.width : cw;
+                  ch = rc.height;  // ch = (rc.height < ch) ? rc.height : ch;
+               }
+            }
+         }
+         ofNoFill();
+         ofRect(cx, cy, cw, ch);
+         // contourFinder.draw();
+      }
+      ofPopMatrix();
+
+      ofSetHexColor(0xff0000);
+      ofDrawLine(leftMargin + leftLimit, kinect.height + gOffset * 2, leftMargin + leftLimit, (kinect.height + gOffset) * 2);
+      ofDrawLine(leftMargin + kinect.width - rightLimit, kinect.height + gOffset * 2, leftMargin + kinect.width - rightLimit, (kinect.height + gOffset) * 2);
    }
 
    bool imGui() {
+      ofSetHexColor(0xffffff);
+
       auto guiSettings = ofxPreset::Gui::Settings();
       guiSettings.windowPos = ofVec2f(gOffset, gOffset);
-      guiSettings.windowSize = ofVec2f(ofGetWidth() - gOffset * 2, ofGetHeight() - gOffset * 2);
+      guiSettings.windowSize = ofVec2f(400 - gOffset * 2, 900 - gOffset * 2);
 
       gui.begin();
       gui.draw();
@@ -193,6 +309,7 @@ class GuiApp : public ofBaseApp {
             ofxPreset::Gui::AddGroup(exploParams, guiSettings);
             ofxPreset::Gui::AddGroup(monkParams, guiSettings);
             ofxPreset::Gui::AddGroup(nikesParams, guiSettings);
+            ofxPreset::Gui::AddGroup(kinectParams, guiSettings);
          }
          ofxPreset::Gui::EndWindow(guiSettings);
       }
@@ -208,6 +325,7 @@ class GuiApp : public ofBaseApp {
       ofSerialize(settings, nikesParams);
       ofSerialize(settings, exploParams);
       ofSerialize(settings, offsetParams);
+      ofSerialize(settings, kinectParams);
 
       if (path == "") {
          ofFileDialogResult saveFileResult = ofSystemSaveDialog(ofGetTimestampString() + ".xml", "Save Settings");
@@ -235,6 +353,7 @@ class GuiApp : public ofBaseApp {
          ofDeserialize(settings, nikesParams);
          ofDeserialize(settings, exploParams);
          ofDeserialize(settings, offsetParams);
+         ofDeserialize(settings, kinectParams);
       }
    }
 

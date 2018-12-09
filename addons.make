@@ -6,3 +6,6 @@ ofxXmlSettings
 ofxTitles
 ofxPoco
 ofxTextSuite
+ofxKinect
+ofxOpenCv
+ofxCv
