@@ -15,6 +15,8 @@ void ofApp::setup() {
    monk.load("vids/Nikes.mp4");
    monk.setLoopState(OF_LOOP_NORMAL);
    monk.play();
+
+   ofBackground(0);
 }
 
 //--------------------------------------------------------------
@@ -28,15 +30,35 @@ void ofApp::update() {
 
 //--------------------------------------------------------------
 void ofApp::draw() {
-   ofSetColor(gui->color);
-   ofDrawCircle(ofGetWidth() * 0.5, ofGetWidth() * 0.5, gui->radius);
-   ofSetColor(0);
-   ofDrawBitmapString(ofGetFrameRate(), 20, 20);
+   // ofSetColor(gui->color);
+   // ofDrawCircle(ofGetWidth() * 0.5, ofGetWidth() * 0.5, gui->radius);
+
+   drawVid(nikes, DD_NIKES);
 }
 
-void ofApp::drawVid(ofVideoPlayer& vid) {
-   ofSetHexColor(0xFFFFFF);
-   vid.draw(20, 20);
+void ofApp::drawVid(ofVideoPlayer& vid, ddVideos flag) {
+   ofParameterGroup params;
+   string prefix = "";
+   switch (flag) {
+      case DD_MONK:
+         params = gui->monkParams;
+         prefix = "monk";
+         break;
+      case DD_NIKES:
+         params = gui->nikesParams;
+         prefix = "nikes";
+         break;
+      case DD_EXPLO:
+         params = gui->exploParams;
+         prefix = "explo";
+         break;
+   }
+
+   // cout << gui->allParams.get("nikesParams").get("nikesX") << endl;
+   int x = params.getInt(prefix + "X") + params.getInt(prefix + "LO") + params.getInt(prefix + "RO");
+   int y = params.getInt(prefix + "Y") + params.getInt(prefix + "TO") + params.getInt(prefix + "BO");
+   int w = params.getInt(prefix + "W");
+   vid.draw(x, y, w, w);
 }
 
 //--------------------------------------------------------------

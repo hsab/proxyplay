@@ -4,6 +4,12 @@
 #include "ofMain.h"
 
 class ofApp : public ofBaseApp {
+   enum ddVideos : short {
+      DD_MONK = 0x01,
+      DD_NIKES = 0x02,
+      DD_EXPLO = 0x03
+   };
+
   public:
    void setup();
    void update();
@@ -21,7 +27,7 @@ class ofApp : public ofBaseApp {
    void dragEvent(ofDragInfo dragInfo);
    void gotMessage(ofMessage msg);
 
-   void drawVid(ofVideoPlayer& vid);
+   void drawVid(ofVideoPlayer& vid, ddVideos flag);
 
    shared_ptr<GuiApp> gui;
    ofVideoPlayer monk;
