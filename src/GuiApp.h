@@ -79,6 +79,8 @@ class GuiApp : public ofBaseApp {
    float limitedViewWidth;
    bool updateInApp = false;
 
+   ofxPanel soundGui;
+
    void setup() {
       ofSetEscapeQuitsApp(false);
 
@@ -298,6 +300,7 @@ class GuiApp : public ofBaseApp {
       ofSetHexColor(0xff0000);
       ofDrawLine(leftMargin + leftLimit, kinect.height + gOffset * 2, leftMargin + leftLimit, (kinect.height + gOffset) * 2);
       ofDrawLine(leftMargin + kinect.width - rightLimit, kinect.height + gOffset * 2, leftMargin + kinect.width - rightLimit, (kinect.height + gOffset) * 2);
+      // soundGui.draw();
    }
 
    bool imGui() {

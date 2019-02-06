@@ -5,6 +5,10 @@
 #include "ofxTitles.h"
 #include "srtparser.h"
 
+#include "ofxMidi.h"
+#include "ofxPDSP.h"
+#include "synth.h"
+
 class ofApp : public ofBaseApp {
    enum ddVideos : short {
       DD_MONK = 0x01,
@@ -35,6 +39,31 @@ class ofApp : public ofBaseApp {
    ofxTitles mTitles;
    ofColor subColor;
 
+   int col;
+   int channel;
+
+   int mode;
+
+   ofParameter<float> smooth;
+   void smoothCall(float& value);
+
+   ofFbo waveplot;
+
+   pdsp::Engine engine;
+
+   PolySynth synth;
+   int camWidth;
+   int camHeight;
+
+   bool initSound = false;
+
+#ifdef USE_MIDI_KEYBOARD
+   pdsp::midi::Keys keyboard;
+   pdsp::midi::Input midiIn;
+#else
+   pdsp::ComputerKeyboard keyboard;
+#endif
+
    //--------------------------------------------------------------
    void setup() {
       ofSetEscapeQuitsApp(false);
@@ -60,6 +89,9 @@ class ofApp : public ofBaseApp {
       explo.setLoopState(OF_LOOP_NORMAL);
       explo.play();
 
+      camWidth = explo.getWidth();  // try to grab at this size.
+      camHeight = explo.getHeight();
+
       // ofLogNotice() << "Loading sound.";
       // sunless.load("vids/sunless.wav");
       // ofLogNotice() << "Sound loaded";
@@ -82,6 +114,45 @@ class ofApp : public ofBaseApp {
       mTitles.play();
 
       ofBackground(0);
+
+      channel = 0;
+      col = 160;  // col for getting pixels to wave
+      mode = 0;
+      waveplot.allocate(camHeight * 2 + 4, 170);
+
+      //patching-------------------------------
+      keyboard.setPolyMode(8);
+
+      int voicesNum = keyboard.getVoicesNumber();
+
+      synth.datatable.setup(camHeight, camHeight);  // as many samples as the webcam width
+                                                    //synth.datatable.smoothing(0.5f);
+
+      synth.setup(voicesNum);
+      for (int i = 0; i < voicesNum; ++i) {
+         // connect each voice to a pitch and trigger output
+         keyboard.out_trig(i) >> synth.voices[i].in("trig");
+         keyboard.out_pitch(i) >> synth.voices[i].in("pitch");
+      }
+
+      // patch synth to the engine
+      synth.ch(0) >> engine.audio_out(0);
+      synth.ch(1) >> engine.audio_out(1);
+
+      smooth.set(0.3f);
+
+      // audio / midi setup----------------------------
+#ifdef USE_MIDI_KEYBOARD
+      midiIn.listPorts();
+      midiIn.openPort(0);  //set the right port !!!
+      engine.addMidiController(keyboard, midiIn);
+#endif
+      engine.listDevices();
+      engine.setDeviceID(11);  // REMEMBER TO SET THIS AT THE RIGHT INDEX!!!!
+      engine.setup(44100, 512, 3);
+
+      gui->soundGui.setup("", "settings.xml", 20, 1100);
+      gui->soundGui.add(synth.ui);
    }
 
    void setupSubtitle() {
@@ -108,12 +179,78 @@ class ofApp : public ofBaseApp {
          float pct = gui->limitedViewWidth - gui->limitedViewerPosition;
          pct = pct / gui->limitedViewWidth;
          exploSpeed = (2 * pct - 1) * gui->exploParams.getInt("speedLimit");
+         exploSpeed = -exploSpeed;
          explo.setSpeed(exploSpeed);
       }
 
       nikes.update();
       monk.update();
       explo.update();
+
+      if (explo.isFrameNew() && synth.datatable.ready()) {
+         initSound = true;
+         ofPixels& pixels = explo.getPixels();
+
+         // ------------------ GENERATING THE WAVE ----------------------
+
+         // a pdsp::DataTable easily convert data to a waveform in real time
+         // if you don't need to generate waves in real time but
+         // interpolate between already stored waves pdsp::WaveTable is a better choice
+         // for example if you want to convert an image you already have to a wavetable
+
+         switch (mode) {
+            case 0:  // converting pixels to waveform samples
+               synth.datatable.begin();
+               for (int n = 0; n < camHeight; ++n) {
+                  float sample = ofMap(pixels.getData()[col * 3 + channel + n * 3 * camWidth], 0, 255, -0.5f, 0.5f);
+                  synth.datatable.data(n, sample);
+               }
+               synth.datatable.end(false);
+               break;  // remember, raw waveform could have DC offsets, we have filtered them in the synth using an hpf
+
+            case 1:  // converting pixels to partials for additive synthesis
+               synth.datatable.begin();
+               for (int n = 0; n < camHeight; ++n) {
+                  float partial = ofMap(pixels.getData()[col * 3 + channel + n * 3 * camWidth], 0, 255, 0.0f, 1.0f);
+                  synth.datatable.data(n, partial);
+               }
+               synth.datatable.end(true);
+               break;
+         }
+
+         // ----------------- PLOTTING THE WAVEFORM ---------------------
+         waveplot.begin();
+         ofClear(0, 0, 0, 0);
+
+         ofSetColor(255);
+         ofDrawRectangle(1, 1, waveplot.getWidth() - 2, waveplot.getHeight() - 2);
+         ofTranslate(2, 2);
+         switch (mode) {
+            case 0:  // plot the raw waveforms
+               ofBeginShape();
+               for (int n = 0; n < camHeight; ++n) {
+                  float y = ofMap(pixels.getData()[col * 3 + channel + n * 3 * camWidth], 0, 255, camHeight, 0);
+                  ofVertex(n * 2, y);
+               }
+               ofEndShape();
+               break;
+
+            case 1:  // plot the partials
+               for (int n = 0; n < camHeight; ++n) {
+                  float partial = ofMap(pixels.getData()[col * 3 + channel + n * 3 * camWidth], 0, 255, 0.0f, 1.0f);
+                  int h = waveplot.getHeight() * partial;
+                  int y = waveplot.getHeight() - h;
+                  ofDrawLine(n * 2, y, n * 2, camHeight);
+               }
+               break;
+         }
+         waveplot.end();
+      }
+
+      if (initSound) {
+         keyboard.keyPressed('a');
+         keyboard.keyPressed('y');
+      }
    }
 
    //--------------------------------------------------------------
@@ -132,7 +269,7 @@ class ofApp : public ofBaseApp {
       }
       ofPopMatrix();
 
-      mTitles.drawCenter(ofGetWidth() / 2, ofGetWidth() / 2, ofGetHeight() - 100, subColor);
+      // mTitles.drawCenter(ofGetWidth() / 2, ofGetWidth() / 2, ofGetHeight() - 100, subColor);
    }
 
    void drawVid(ofVideoPlayer& vid, ddVideos flag) {
@@ -214,10 +351,19 @@ class ofApp : public ofBaseApp {
          ofToggleFullscreen();
       if (key == 's')
          gui->nextStyle();
+
+#ifndef USE_MIDI_KEYBOARD
+      // sends key messages to ofxPDSPComputerKeyboard
+      keyboard.keyPressed(key);
+#endif
    }
 
    //--------------------------------------------------------------
    void keyReleased(int key) {
+#ifndef USE_MIDI_KEYBOARD
+      // sends key messages to ofxPDSPComputerKeyboard
+      keyboard.keyReleased(key);
+#endif
    }
 
    //--------------------------------------------------------------

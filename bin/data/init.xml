@@ -41,10 +41,10 @@
     <minArea>50</minArea>
     <maxArea>5000</maxArea>
     <thresholdArea>0</thresholdArea>
-    <nearThreshold>255</nearThreshold>
-    <farThreshold>160</farThreshold>
+    <nearThreshold>180</nearThreshold>
+    <farThreshold>60</farThreshold>
     <triggerThreshold>5</triggerThreshold>
-    <leftLimit>80</leftLimit>
-    <rightLimit>160</rightLimit>
+    <leftLimit>60</leftLimit>
+    <rightLimit>100</rightLimit>
     <angle>0</angle>
 </kinectParams>

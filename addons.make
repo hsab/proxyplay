@@ -9,3 +9,8 @@ ofxTextSuite
 ofxKinect
 ofxOpenCv
 ofxCv
+ofxSIMDFloats
+ofxMidi
+ofxPDSP
+ofxOsc
+ofxAudioFile
