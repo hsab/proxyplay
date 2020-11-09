@@ -1,22 +1,28 @@
 #pragma once
+// #ifndef USE_ENGINE_PDSP
+// #define USE_ENGINE_PDSP
+// #endif
 
 #include "GuiApp.h"
 #include "ofMain.h"
 #include "ofxTitles.h"
 #include "srtparser.h"
 
+#ifdef USE_ENGINE_PDSP
 #include "ofxMidi.h"
 #include "ofxPDSP.h"
 #include "synth.h"
-
-class ofApp : public ofBaseApp {
-   enum ddVideos : short {
+#endif
+class ofApp : public ofBaseApp
+{
+   enum ddVideos : short
+   {
       DD_MONK = 0x01,
       DD_NIKES = 0x02,
       DD_EXPLO = 0x03
    };
 
-  public:
+public:
    shared_ptr<GuiApp> gui;
    ofVideoPlayer monk;
    ofVideoPlayer nikes;
@@ -33,9 +39,9 @@ class ofApp : public ofBaseApp {
 
    ofTrueTypeFont infoFont;
 
-   SubtitleParserFactory* subParserFactory;
-   SubtitleParser* parser;
-   vector<SubtitleItem*> sub;
+   SubtitleParserFactory *subParserFactory;
+   SubtitleParser *parser;
+   vector<SubtitleItem *> sub;
    ofxTitles mTitles;
    ofColor subColor;
 
@@ -45,27 +51,32 @@ class ofApp : public ofBaseApp {
    int mode;
 
    ofParameter<float> smooth;
-   void smoothCall(float& value);
+   void smoothCall(float &value);
 
    ofFbo waveplot;
 
+#ifdef USE_ENGINE_PDSP
    pdsp::Engine engine;
-
    PolySynth synth;
+#endif
+
    int camWidth;
    int camHeight;
 
    bool initSound = false;
 
+#ifdef USE_ENGINE_PDSP
 #ifdef USE_MIDI_KEYBOARD
    pdsp::midi::Keys keyboard;
    pdsp::midi::Input midiIn;
 #else
    pdsp::ComputerKeyboard keyboard;
 #endif
+#endif
 
    //--------------------------------------------------------------
-   void setup() {
+   void setup()
+   {
       ofSetEscapeQuitsApp(false);
 
       // subColor = ofColor(255, 245, 0);
@@ -89,7 +100,7 @@ class ofApp : public ofBaseApp {
       explo.setLoopState(OF_LOOP_NORMAL);
       explo.play();
 
-      camWidth = explo.getWidth();  // try to grab at this size.
+      camWidth = explo.getWidth(); // try to grab at this size.
       camHeight = explo.getHeight();
 
       // ofLogNotice() << "Loading sound.";
@@ -116,20 +127,22 @@ class ofApp : public ofBaseApp {
       ofBackground(0);
 
       channel = 0;
-      col = 160;  // col for getting pixels to wave
+      col = 160; // col for getting pixels to wave
       mode = 0;
       waveplot.allocate(camHeight * 2 + 4, 170);
 
+#ifdef USE_ENGINE_PDSP
       //patching-------------------------------
       keyboard.setPolyMode(8);
 
       int voicesNum = keyboard.getVoicesNumber();
 
-      synth.datatable.setup(camHeight, camHeight);  // as many samples as the webcam width
-                                                    //synth.datatable.smoothing(0.5f);
+      synth.datatable.setup(camHeight, camHeight); // as many samples as the webcam width
+                                                   //synth.datatable.smoothing(0.5f);
 
       synth.setup(voicesNum);
-      for (int i = 0; i < voicesNum; ++i) {
+      for (int i = 0; i < voicesNum; ++i)
+      {
          // connect each voice to a pitch and trigger output
          keyboard.out_trig(i) >> synth.voices[i].in("trig");
          keyboard.out_pitch(i) >> synth.voices[i].in("pitch");
@@ -138,27 +151,32 @@ class ofApp : public ofBaseApp {
       // patch synth to the engine
       synth.ch(0) >> engine.audio_out(0);
       synth.ch(1) >> engine.audio_out(1);
+#endif
 
       smooth.set(0.3f);
 
       // audio / midi setup----------------------------
+#ifdef USE_ENGINE_PDSP
 #ifdef USE_MIDI_KEYBOARD
       midiIn.listPorts();
-      midiIn.openPort(0);  //set the right port !!!
+      midiIn.openPort(0); //set the right port !!!
       engine.addMidiController(keyboard, midiIn);
 #endif
       engine.listDevices();
-      engine.setDeviceID(11);  // REMEMBER TO SET THIS AT THE RIGHT INDEX!!!!
+      engine.setDeviceID(0); // REMEMBER TO SET THIS AT THE RIGHT INDEX!!!!
       engine.setup(44100, 512, 3);
 
       gui->soundGui.setup("", "settings.xml", 20, 1100);
       gui->soundGui.add(synth.ui);
+#endif
    }
 
-   void setupSubtitle() {
+   void setupSubtitle()
+   {
       int i = 1;
 
-      for (SubtitleItem* element : sub) {
+      for (SubtitleItem *element : sub)
+      {
          // cout << "BEGIN" << endl;
          // cout << "start : " << element->getStartTime() << endl;
          // cout << "end : " << element->getEndTime() << endl;
@@ -171,11 +189,13 @@ class ofApp : public ofBaseApp {
    }
 
    //--------------------------------------------------------------
-   void update() {
+   void update()
+   {
       centerX = ofGetWidth() / 2;
       centerY = ofGetHeight() / 2;
 
-      if (gui->updateInApp) {
+      if (gui->updateInApp)
+      {
          float pct = gui->limitedViewWidth - gui->limitedViewerPosition;
          pct = pct / gui->limitedViewWidth;
          exploSpeed = (2 * pct - 1) * gui->exploParams.getInt("speedLimit");
@@ -187,9 +207,11 @@ class ofApp : public ofBaseApp {
       monk.update();
       explo.update();
 
-      if (explo.isFrameNew() && synth.datatable.ready()) {
+#ifdef USE_ENGINE_PDSP
+      if (explo.isFrameNew() && synth.datatable.ready())
+      {
          initSound = true;
-         ofPixels& pixels = explo.getPixels();
+         ofPixels &pixels = explo.getPixels();
 
          // ------------------ GENERATING THE WAVE ----------------------
 
@@ -198,24 +220,27 @@ class ofApp : public ofBaseApp {
          // interpolate between already stored waves pdsp::WaveTable is a better choice
          // for example if you want to convert an image you already have to a wavetable
 
-         switch (mode) {
-            case 0:  // converting pixels to waveform samples
-               synth.datatable.begin();
-               for (int n = 0; n < camHeight; ++n) {
-                  float sample = ofMap(pixels.getData()[col * 3 + channel + n * 3 * camWidth], 0, 255, -0.5f, 0.5f);
-                  synth.datatable.data(n, sample);
-               }
-               synth.datatable.end(false);
-               break;  // remember, raw waveform could have DC offsets, we have filtered them in the synth using an hpf
+         switch (mode)
+         {
+         case 0: // converting pixels to waveform samples
+            synth.datatable.begin();
+            for (int n = 0; n < camHeight; ++n)
+            {
+               float sample = ofMap(pixels.getData()[col * 3 + channel + n * 3 * camWidth], 0, 255, -0.5f, 0.5f);
+               synth.datatable.data(n, sample);
+            }
+            synth.datatable.end(false);
+            break; // remember, raw waveform could have DC offsets, we have filtered them in the synth using an hpf
 
-            case 1:  // converting pixels to partials for additive synthesis
-               synth.datatable.begin();
-               for (int n = 0; n < camHeight; ++n) {
-                  float partial = ofMap(pixels.getData()[col * 3 + channel + n * 3 * camWidth], 0, 255, 0.0f, 1.0f);
-                  synth.datatable.data(n, partial);
-               }
-               synth.datatable.end(true);
-               break;
+         case 1: // converting pixels to partials for additive synthesis
+            synth.datatable.begin();
+            for (int n = 0; n < camHeight; ++n)
+            {
+               float partial = ofMap(pixels.getData()[col * 3 + channel + n * 3 * camWidth], 0, 255, 0.0f, 1.0f);
+               synth.datatable.data(n, partial);
+            }
+            synth.datatable.end(true);
+            break;
          }
 
          // ----------------- PLOTTING THE WAVEFORM ---------------------
@@ -225,36 +250,41 @@ class ofApp : public ofBaseApp {
          ofSetColor(255);
          ofDrawRectangle(1, 1, waveplot.getWidth() - 2, waveplot.getHeight() - 2);
          ofTranslate(2, 2);
-         switch (mode) {
-            case 0:  // plot the raw waveforms
-               ofBeginShape();
-               for (int n = 0; n < camHeight; ++n) {
-                  float y = ofMap(pixels.getData()[col * 3 + channel + n * 3 * camWidth], 0, 255, camHeight, 0);
-                  ofVertex(n * 2, y);
-               }
-               ofEndShape();
-               break;
+         switch (mode)
+         {
+         case 0: // plot the raw waveforms
+            ofBeginShape();
+            for (int n = 0; n < camHeight; ++n)
+            {
+               float y = ofMap(pixels.getData()[col * 3 + channel + n * 3 * camWidth], 0, 255, camHeight, 0);
+               ofVertex(n * 2, y);
+            }
+            ofEndShape();
+            break;
 
-            case 1:  // plot the partials
-               for (int n = 0; n < camHeight; ++n) {
-                  float partial = ofMap(pixels.getData()[col * 3 + channel + n * 3 * camWidth], 0, 255, 0.0f, 1.0f);
-                  int h = waveplot.getHeight() * partial;
-                  int y = waveplot.getHeight() - h;
-                  ofDrawLine(n * 2, y, n * 2, camHeight);
-               }
-               break;
+         case 1: // plot the partials
+            for (int n = 0; n < camHeight; ++n)
+            {
+               float partial = ofMap(pixels.getData()[col * 3 + channel + n * 3 * camWidth], 0, 255, 0.0f, 1.0f);
+               int h = waveplot.getHeight() * partial;
+               int y = waveplot.getHeight() - h;
+               ofDrawLine(n * 2, y, n * 2, camHeight);
+            }
+            break;
          }
          waveplot.end();
       }
-
-      if (initSound) {
+      if (initSound)
+      {
          keyboard.keyPressed('a');
          keyboard.keyPressed('y');
       }
+#endif
    }
 
    //--------------------------------------------------------------
-   void draw() {
+   void draw()
+   {
       // ofSetColor(gui->color);
       // ofDrawCircle(ofGetWidth() * 0.5, ofGetWidth() * 0.5, gui->radius);
 
@@ -272,22 +302,24 @@ class ofApp : public ofBaseApp {
       // mTitles.drawCenter(ofGetWidth() / 2, ofGetWidth() / 2, ofGetHeight() - 100, subColor);
    }
 
-   void drawVid(ofVideoPlayer& vid, ddVideos flag) {
+   void drawVid(ofVideoPlayer &vid, ddVideos flag)
+   {
       ofParameterGroup params;
       string prefix = "";
-      switch (flag) {
-         case DD_MONK:
-            params = gui->monkParams;
-            prefix = "monk";
-            break;
-         case DD_NIKES:
-            params = gui->nikesParams;
-            prefix = "nikes";
-            break;
-         case DD_EXPLO:
-            params = gui->exploParams;
-            prefix = "explo";
-            break;
+      switch (flag)
+      {
+      case DD_MONK:
+         params = gui->monkParams;
+         prefix = "monk";
+         break;
+      case DD_NIKES:
+         params = gui->nikesParams;
+         prefix = "nikes";
+         break;
+      case DD_EXPLO:
+         params = gui->exploParams;
+         prefix = "explo";
+         break;
       }
 
       // cout << gui->allParams.get("nikesParams").get("nikesX") << endl;
@@ -300,7 +332,8 @@ class ofApp : public ofBaseApp {
          drawExploControls(params, x, y, w);
    }
 
-   void drawExploControls(ofParameterGroup& params, int x, int y, int w) {
+   void drawExploControls(ofParameterGroup &params, int x, int y, int w)
+   {
       int vertOffset = params.getInt("vertOffset");
       int horizOffset = params.getInt("horizOffset");
       int nX = x + w + vertOffset;
@@ -335,7 +368,8 @@ class ofApp : public ofBaseApp {
       ofDrawLine(x, nY - 4, x, nY + 4);
       // ofDrawLine(nX, nY - 4, nX, nY + 4);
       ofSetLineWidth(1.0f);
-      for (auto shot : exploShots) {
+      for (auto shot : exploShots)
+      {
          int shotX = ofMap(shot, 0, exploFrames, x, nX);
          ofDrawLine(shotX, nY - 4, shotX, nY + 4);
       }
@@ -346,28 +380,35 @@ class ofApp : public ofBaseApp {
    }
 
    //--------------------------------------------------------------
-   void keyPressed(int key) {
+   void keyPressed(int key)
+   {
       if (key == 'f')
          ofToggleFullscreen();
       if (key == 's')
          gui->nextStyle();
 
+#ifdef USE_ENGINE_PDSP
 #ifndef USE_MIDI_KEYBOARD
       // sends key messages to ofxPDSPComputerKeyboard
       keyboard.keyPressed(key);
 #endif
-   }
-
-   //--------------------------------------------------------------
-   void keyReleased(int key) {
-#ifndef USE_MIDI_KEYBOARD
-      // sends key messages to ofxPDSPComputerKeyboard
-      keyboard.keyReleased(key);
 #endif
    }
 
    //--------------------------------------------------------------
-   void mouseMoved(int x, int y) {
+   void keyReleased(int key)
+   {
+#ifdef USE_ENGINE_PDSP
+#ifndef USE_MIDI_KEYBOARD
+      // sends key messages to ofxPDSPComputerKeyboard
+      keyboard.keyReleased(key);
+#endif
+#endif
+   }
+
+   //--------------------------------------------------------------
+   void mouseMoved(int x, int y)
+   {
       // int width = ofGetWidth();
       // float pct = (float)x / (float)width;
       // exploSpeed = (2 * pct - 1) * gui->exploParams.getInt("speedLimit");
@@ -375,34 +416,42 @@ class ofApp : public ofBaseApp {
    }
 
    //--------------------------------------------------------------
-   void mouseDragged(int x, int y, int button) {
+   void mouseDragged(int x, int y, int button)
+   {
    }
 
    //--------------------------------------------------------------
-   void mousePressed(int x, int y, int button) {
+   void mousePressed(int x, int y, int button)
+   {
    }
 
    //--------------------------------------------------------------
-   void mouseReleased(int x, int y, int button) {
+   void mouseReleased(int x, int y, int button)
+   {
    }
 
    //--------------------------------------------------------------
-   void mouseEntered(int x, int y) {
+   void mouseEntered(int x, int y)
+   {
    }
 
    //--------------------------------------------------------------
-   void mouseExited(int x, int y) {
+   void mouseExited(int x, int y)
+   {
    }
 
    //--------------------------------------------------------------
-   void windowResized(int w, int h) {
+   void windowResized(int w, int h)
+   {
    }
 
    //--------------------------------------------------------------
-   void gotMessage(ofMessage msg) {
+   void gotMessage(ofMessage msg)
+   {
    }
 
    //--------------------------------------------------------------
-   void dragEvent(ofDragInfo dragInfo) {
+   void dragEvent(ofDragInfo dragInfo)
+   {
    }
 };
