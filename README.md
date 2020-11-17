@@ -1,5 +1,5 @@
 # ProxyPlay
-## Naked Surveillance as Corporeal User Interfaces
+## Naked Surveillance as a Corporeal User Interface and Material Experience
 
 <img src="https://github.com/hsab/proxyplay/raw/master/assets/demo.gif" alt="Demo gif" width="1080px">
 
