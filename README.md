@@ -1,5 +1,5 @@
 # ProxyPlay
-## Naked Surveillance as a Corporeal User Interface and Material Experience
+## Tangible media interaction with consumer-grade RGBD sensors as kinetic and corporeal user interfaces
 
 <img src="https://github.com/hsab/proxyplay/raw/master/assets/demo.gif" alt="Demo gif" width="1080px">
 
