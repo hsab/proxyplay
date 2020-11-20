@@ -1,5 +1,5 @@
 # ProxyPlay
-## Tangible media interaction with consumer-grade RGBD sensors as kinetic and corporeal user interfaces
+## Tangible interaction with moving images and kinetic user interfaces with real-time RGB-D image analysis
 
 <img src="https://github.com/hsab/proxyplay/raw/master/assets/demo.gif" alt="Demo gif" width="1080px">
 
